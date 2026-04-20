@@ -22,7 +22,7 @@ labels["dementia"] = labels["Id"].isin(has_dementia).astype(int)
 print(labels["dementia"].value_counts())
 
 # === Run chatty on a few patients ===
-fhir_files = glob.glob("fhir/*.json")
+fhir_files = glob.glob(f"{SYNTHEA_OUTPUT}/fhir/*.json")
 
 for f in fhir_files[:3]:
     subprocess.run(
