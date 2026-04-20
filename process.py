@@ -1,71 +1,59 @@
+
 import pandas as pd
 import json
-import base64
 import subprocess
+
 import glob
-from datetime import datetime
+patients = pd.read_csv("csv/patients.csv")
+conditions = pd.read_csv("csv/conditions.csv")
 
-SYNTHEA_OUTPUT = "../synthea/output"
-patients   = pd.read_csv(f"{SYNTHEA_OUTPUT}/csv/patients.csv")
-conditions = pd.read_csv(f"{SYNTHEA_OUTPUT}/csv/conditions.csv")
-
-# Who has dementia?
 has_dementia = conditions[
-    conditions['DESCRIPTION'].str.contains(
-        'dementia|alzheimer', case=False, na=False
+    conditions["DESCRIPTION"].str.contains(
+        "dementia|alzheimer", case=False, na=False
     )
-]['PATIENT'].unique()
+]["PATIENT"].unique()
 
-# Final label dataframe
-labels = patients[['Id']].copy()
-labels['dementia'] = labels['Id'].isin(has_dementia).astype(int)
+labels = patients[["Id"]].copy()
+labels["dementia"] = labels["Id"].isin(has_dementia).astype(int)
 
-print(labels['dementia'].value_counts())
+print(labels["dementia"].value_counts())
 
+# === Run chatty on a few patients ===
+fhir_files = glob.glob("fhir/*.json")
 
-fhir_files = glob.glob(f"{SYNTHEA_OUTPUT}/fhir/*.json")
+for f in fhir_files[:3]:
+    subprocess.run(
+        ["python", "chatty.py", "-b", f, "--llm-model", "llama3.1:8b"],
+        check=True,
+    )
 
-for idx, f in enumerate(fhir_files[0:3]):
-    starttime = datetime.now()
-    subprocess.run(["python", "chatty.py", "-b", f, "--llm-backend", "ollama", "--llm-model", "llama3.1:8b"])
-    endtime = datetime.now()
-    total_time = endtime - starttime
-    print(f"{idx} processed in {total_time}")
-
-
+# === Build dataset from summaries ===
 records = []
-for fhir_file in glob.glob("output/*.json"):
-    with open(fhir_file) as f:
-        bundle = json.load(f)
 
-    patient_id, note_text = None, []
-    for entry in bundle.get('entry', []):
-        r = entry.get('resource', {})
+for f in glob.glob("output/*.json"):
+    with open(f) as fp:
+        bundle = json.load(fp)
 
-        if r.get('resourceType') == 'Patient':
-            patient_id = r['id']
+    patient_id = None
+    for e in bundle.get("entry", []):
+        if e.get("resource", {}).get("resourceType") == "Patient":
+            patient_id = e["resource"]["id"]
+            break
 
-        if r.get('resourceType') == 'DocumentReference':
-            for content in r.get('content', []):
-                encoded = content.get('attachment', {}).get('data')
-
-                if not encoded:
-                    continue
-
-                # Base64 that chatty.py produces back to plain text
-                decoded_text = base64.b64decode(encoded).decode("utf-8")
-
-                note_text.append(decoded_text)
-
-    if patient_id:
+    summary = bundle.get("dementia_summary", "").strip()
+    if patient_id and summary:
         records.append({
-            'Id': patient_id,
-            'note': ' '.join(note_text)
+            "Id": patient_id,
+            "note": summary
         })
-
 
 notes_df = pd.DataFrame(records)
 
-dataset = notes_df.merge(labels, on='Id')
-dataset = dataset[['Id', 'note', 'dementia']]  # just the three columns
+dataset = notes_df.merge(labels, on="Id", how="inner")
+dataset = dataset[["Id", "note", "dementia"]]
+
 dataset.to_csv("dementia_dataset.csv", index=False)
+
+print("Saved dementia_dataset.csv")
+
+
