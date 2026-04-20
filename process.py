@@ -4,9 +4,12 @@ import json
 import subprocess
 
 import glob
-patients = pd.read_csv("csv/patients.csv")
-conditions = pd.read_csv("csv/conditions.csv")
 
+SYNTHEA_OUTPUT = "../synthea/output"
+patients   = pd.read_csv(f"{SYNTHEA_OUTPUT}/csv/patients.csv")
+conditions = pd.read_csv(f"{SYNTHEA_OUTPUT}/csv/conditions.csv")
+
+# Who has dementia?
 has_dementia = conditions[
     conditions["DESCRIPTION"].str.contains(
         "dementia|alzheimer", case=False, na=False
