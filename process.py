@@ -24,7 +24,7 @@ print(labels["dementia"].value_counts())
 # === Run chatty on a few patients ===
 fhir_files = glob.glob(f"{SYNTHEA_OUTPUT}/fhir/*.json")
 
-for f in fhir_files[:3]:
+for f in fhir_files[:10]:
     subprocess.run(
         ["python", "chatty.py", "-b", f, "--llm-model", "llama3.1:8b"],
         check=True,
