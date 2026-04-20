@@ -24,7 +24,7 @@ print(labels['dementia'].value_counts())
 fhir_files = glob.glob(f"{SYNTHEA_OUTPUT}/fhir/*.json")
 
 for idx, f in enumerate(fhir_files[0:3]):
-    subprocess.run(["python", "chatty.py", "-b", f, "--llm-backend", "ollama", "--llm-model", "tinyllama:latest"])
+    subprocess.run(["python", "chatty.py", "-b", f, "--llm-backend", "ollama", "--llm-model", "llama3.1:8b"])
     print(f"{idx} processed")
 
 records = []
