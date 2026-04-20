@@ -9,17 +9,18 @@ SYNTHEA_OUTPUT = "../synthea/output"
 patients   = pd.read_csv(f"{SYNTHEA_OUTPUT}/csv/patients.csv")
 conditions = pd.read_csv(f"{SYNTHEA_OUTPUT}/csv/conditions.csv")
 
-# Who has dementia?
-has_dementia = conditions[
+# Who has diabetes?
+
+has_diabetes = conditions[
     conditions["DESCRIPTION"].str.contains(
-        "dementia|alzheimer", case=False, na=False
+        "diabetes", case=False, na=False
     )
 ]["PATIENT"].unique()
 
 labels = patients[["Id"]].copy()
-labels["dementia"] = labels["Id"].isin(has_dementia).astype(int)
+labels["diabetes"] = labels["Id"].isin(has_diabetes).astype(int)
 
-print(labels["dementia"].value_counts())
+print(labels["diabetes"].value_counts())
 
 # === Run chatty on a few patients ===
 fhir_files = glob.glob(f"{SYNTHEA_OUTPUT}/fhir/*.json")
@@ -57,6 +58,6 @@ dataset = dataset[["Id", "note", "dementia"]]
 
 dataset.to_csv("dementia_dataset.csv", index=False)
 
-print("Saved dementia_dataset.csv")
+print("Saved diabetes_dataset.csv")
 
 

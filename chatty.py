@@ -63,56 +63,95 @@ def extract_document_text(bundle):
     return texts
 
 
-def build_dementia_prompt(patient, notes):
+def build_diabetes_prompt(patient, notes):
     age = patient.get("birthDate", "unknown")
     gender = patient.get("gender", "unknown")
 
     # HARD FILTER: only keep cognitively relevant snippets
+
     keywords = [
-        "memory",
-        "confusion",
-        "cognitive",
-        "dementia",
-        "forget",
-        "disoriented",
-        "poor judgment",
-        "needs assistance",
+        # core diabetes terms
+        "diabetes",
+        "hyperglycemia",
+        "hypoglycemia",
+        "blood sugar",
+        "glucose",
+        "a1c",
+        "hba1c",
+
+        # symptoms
+        "polyuria",
+        "polydipsia",
+        "increased thirst",
+        "frequent urination",
+        "fatigue",
+
+        # medications
+        "metformin",
+        "insulin",
+        "glipizide",
+        "glyburide",
+        "sitagliptin",
+        "liraglutide",
+        "semaglutide",
+
+        # care patterns
+        "dietary counseling",
+        "glucose monitoring",
+        "endocrinology",
+        "diabetic",
     ]
 
     relevant = [
-        n[:500]
+        n[:400]
         for n in notes
         if any(k in n.lower() for k in keywords)
     ]
 
-    context = "\n".join(relevant[:10])  # HARD CAP
+    # Step 2: fallback if no disease signal
+    if relevant:
+        selected = relevant[:10]
+    else:
+        # fallback: neutral longitudinal snippets
+        selected = [
+            n[:250]
+            for n in notes[:10]
+        ]
+
+    context = "\n".join(selected)
 
     return f"""
 You are summarizing a patient’s longitudinal medical record.
 
-Write a short, neutral synopsis of the patient’s day‑to‑day functioning
-and notable observations over time.
+
+Below are excerpts from the record:
+--------------------
+{context}
+--------------------
+
+
+Write a short, factual summary focused on metabolic health and diabetes-related
+care over time.
 
 Rules:
-- Do NOT mention diagnoses, disease names, or screening results.
-- Do NOT state conclusions or interpretations.
-- Describe only what is directly observed or reported.
-- Use similar level of detail regardless of findings.
-- Avoid evaluative language (e.g., “significant,” “concerning”).
+- Do NOT state a diagnosis explicitly.
+- Do NOT use medical conclusions or labels.
+- Describe only observations, symptoms, treatments, and care patterns.
 
 Focus on:
-- Independence in daily activities
-- Assistance or caregiving needs
-- Behavioral or functional changes over time
-- How the patient manages routine tasks
+- Blood sugar management issues
+- Symptoms such as increased thirst, urination, or fatigue
+- Medication use related to glucose control
+- Lifestyle or dietary counseling
+- Emergency visits or hospitalizations related to metabolic issues
+- Long-term management patterns
 
 Ignore:
 - Dental care
-- Lab values
-- Medication instructions
-- Administrative or billing text
+- Unrelated acute infections
+- Administrative text
 
-Write 4–6 short factual paragraphs.
+Write 4–6 factual paragraphs using neutral clinical language.
 
 Do not speculate. Do not summarize unrelated medical history.
 
@@ -141,7 +180,7 @@ def main():
     patient = extract_patient(bundle)
     notes = extract_document_text(bundle)
 
-    prompt = build_dementia_prompt(patient, notes)
+    prompt = build_diabetes_prompt(patient, notes)
     summary = generate_summary(prompt, args.llm_model)
 
     # Save ONE clean summary
