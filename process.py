@@ -54,9 +54,9 @@ for f in glob.glob("output/*.json"):
 notes_df = pd.DataFrame(records)
 
 dataset = notes_df.merge(labels, on="Id", how="inner")
-dataset = dataset[["Id", "note", "dementia"]]
+dataset = dataset[["Id", "note", "diabetes"]]
 
-dataset.to_csv("dementia_dataset.csv", index=False)
+dataset.to_csv("diabetes_dataset.csv", index=False)
 
 print("Saved diabetes_dataset.csv")
 
