@@ -1,2 +1,4 @@
-openai >= 0.27.6
+pandas
 Jinja2 >= 2.1.2
+ollama
+openai

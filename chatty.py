@@ -1,5 +1,6 @@
 import os
 import openai
+import ollama
 import argparse
 import json
 import operator
@@ -24,6 +25,20 @@ def parse_arguments():
         required=True,
         help="The filename of the input FHIR Bundle",
     )
+
+    parser.add_argument(
+        "--llm-backend",
+        choices=["ollama", "openai"],
+        default="openai",
+        help="LLM backend to use (default: openai)",
+    )
+
+    parser.add_argument(
+        "--llm-model",
+        default=None,
+        help="Model name (e.g. llama3, mistral, gpt-3.5-turbo)",
+    )
+
     args = parser.parse_args()
     if not Path(args.bundle).exists():
         parser.error("Unable to find bundle file: " + args.bundle)
@@ -123,19 +138,33 @@ def create_template_environment():
     return Environment(loader=PackageLoader("chatty"),
                        autoescape=select_autoescape(), trim_blocks=True)
 
-def generate_note(prompt, role, perf_log):
+def call_ollama(prompt, system_role, model):
+    response = ollama.chat(
+        model=model,
+        messages=[
+            {"role": "system", "content": system_role},
+            {"role": "user", "content": prompt},
+        ],
+    )
+    return response["message"]["content"]
+
+def generate_note(prompt, role, perf_log,  backend, model):
     # Try to call ChatGPT 4 times for this note
     start = perf_counter()
     for attempt in range(1, 5):
         try:
-            response = openai.ChatCompletion.create(
-                model = "gpt-3.5-turbo",
-                messages = [
-                    {"role": "system", "content": role},
-                    {"role": "user", "content": prompt}
-                ]
-            )
-            ai_generated_note = response['choices'][0]['message']['content']
+
+            if backend == "ollama":
+                ai_generated_note = call_ollama(prompt, role, model)
+            elif backend == "openai":
+                response = openai.ChatCompletion.create(
+                    model = "gpt-3.5-turbo",
+                    messages = [
+                        {"role": "system", "content": role},
+                        {"role": "user", "content": prompt}
+                    ]
+                )
+                ai_generated_note = response['choices'][0]['message']['content']
             complete = perf_counter()
             elapsed_time = complete - start
             perf_log.append({"time": elapsed_time, "attempts": attempt, "success": True})
@@ -170,7 +199,15 @@ def main():
     output_bundle = deepcopy(bundle)
     patient = extract_patient(bundle)
     template_env = create_template_environment()
-    openai.api_key = os.getenv("OPENAI_API_KEY")
+
+    backend = args.llm_backend
+
+    if backend == "openai":
+        openai.api_key = os.getenv("OPENAI_API_KEY")
+        model = args.llm_model or "gpt-3.5-turbo"
+    else:
+        model = args.llm_model or "llama3"
+
     encounter_for_problem_template = template_env.get_template('encounter_for_problem.txt.jinja')
     er_template = template_env.get_template('emergency_room.txt.jinja')
     death_cert_template = template_env.get_template('death_certification.txt.jinja')
@@ -193,7 +230,7 @@ def main():
                 prompt = encounter_for_problem_template.render(context)
 
         if prompt is not None:
-          ai_generated_note = generate_note(prompt, system_role, perf_log)
+          ai_generated_note = generate_note(prompt, system_role, perf_log, backend, model)
           # Calling decode at the end here may seem odd, but what it does is
           # transform a python byte array into a string. The end result is
           # the ChatGPT output as a Base64 encoded string.
