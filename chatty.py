@@ -112,7 +112,7 @@ Ignore:
 - Medication instructions
 - Administrative or billing text
 
-Write 4–6 short factual sentences.
+Write 4–6 short factual paragraphs.
 
 Do not speculate. Do not summarize unrelated medical history.
 
