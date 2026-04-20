@@ -88,34 +88,34 @@ def build_dementia_prompt(patient, notes):
     context = "\n".join(relevant[:10])  # HARD CAP
 
     return f"""
-You are a clinician reviewing a longitudinal medical record.
+You are summarizing a patient’s longitudinal medical record.
 
-Task:
-Determine whether this patient shows evidence of dementia or
-progressive cognitive impairment.
+Write a short, neutral synopsis of the patient’s day‑to‑day functioning
+and notable observations over time.
 
-Focus ONLY on:
-- Memory loss
-- Confusion or disorientation
-- Declining executive function
-- Loss of independence
-- Cognitive diagnoses or screenings
+Rules:
+- Do NOT mention diagnoses, disease names, or screening results.
+- Do NOT state conclusions or interpretations.
+- Describe only what is directly observed or reported.
+- Use similar level of detail regardless of findings.
+- Avoid evaluative language (e.g., “significant,” “concerning”).
+
+Focus on:
+- Independence in daily activities
+- Assistance or caregiving needs
+- Behavioral or functional changes over time
+- How the patient manages routine tasks
 
 Ignore:
 - Dental care
-- Infections
+- Lab values
 - Medication instructions
-- Billing or procedural text
+- Administrative or billing text
 
-Patient:
-- Age: {age}
-- Sex: {gender}
+Write 4–6 short factual sentences.
 
-Relevant excerpts:
-{context}
+Do not speculate. Do not summarize unrelated medical history.
 
-Write 1–2 short paragraphs (max 150 words).
-If no evidence exists, say so clearly.
 """
 
 
