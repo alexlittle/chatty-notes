@@ -30,7 +30,7 @@ for idx, f in enumerate(fhir_files[0:3]):
     subprocess.run(["python", "chatty.py", "-b", f, "--llm-backend", "ollama", "--llm-model", "llama3.1:8b"])
     endtime = datetime.now()
     total_time = endtime - starttime
-    print(f"{idx} processed - {total_time} secs")
+    print(f"{idx} processed in {total_time}")
 
 
 records = []
