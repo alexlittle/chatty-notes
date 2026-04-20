@@ -1,5 +1,6 @@
 import pandas as pd
 import json
+import base64
 import subprocess
 import glob
 
@@ -27,6 +28,7 @@ for idx, f in enumerate(fhir_files[0:3]):
     subprocess.run(["python", "chatty.py", "-b", f, "--llm-backend", "ollama", "--llm-model", "llama3.1:8b"])
     print(f"{idx} processed")
 
+
 records = []
 for fhir_file in glob.glob("output/*.json"):
     with open(fhir_file) as f:
@@ -35,15 +37,28 @@ for fhir_file in glob.glob("output/*.json"):
     patient_id, note_text = None, []
     for entry in bundle.get('entry', []):
         r = entry.get('resource', {})
+
         if r.get('resourceType') == 'Patient':
             patient_id = r['id']
+
         if r.get('resourceType') == 'DocumentReference':
             for content in r.get('content', []):
-                text = content.get('attachment', {}).get('data', '')
-                note_text.append(text)
+                encoded = content.get('attachment', {}).get('data')
+
+                if not encoded:
+                    continue
+
+                # Base64 that chatty.py produces back to plain text
+                decoded_text = base64.b64decode(encoded).decode("utf-8")
+
+                note_text.append(decoded_text)
 
     if patient_id:
-        records.append({'Id': patient_id, 'note': ' '.join(note_text)})
+        records.append({
+            'Id': patient_id,
+            'note': ' '.join(note_text)
+        })
+
 
 notes_df = pd.DataFrame(records)
 
