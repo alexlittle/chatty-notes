@@ -3,6 +3,7 @@ import json
 import base64
 import subprocess
 import glob
+from datetime import datetime
 
 SYNTHEA_OUTPUT = "../synthea/output"
 patients   = pd.read_csv(f"{SYNTHEA_OUTPUT}/csv/patients.csv")
@@ -25,8 +26,11 @@ print(labels['dementia'].value_counts())
 fhir_files = glob.glob(f"{SYNTHEA_OUTPUT}/fhir/*.json")
 
 for idx, f in enumerate(fhir_files[0:3]):
+    starttime = datetime.now()
     subprocess.run(["python", "chatty.py", "-b", f, "--llm-backend", "ollama", "--llm-model", "llama3.1:8b"])
-    print(f"{idx} processed")
+    endtime = datetime.now()
+    total_time = endtime - starttime
+    print(f"{idx} processed - {total_time} secs")
 
 
 records = []
